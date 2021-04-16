@@ -6,23 +6,22 @@ const {
   CharacteristicEventTypes, 
   uuid 
 } = require("hap-nodejs");
-
 class HomeKitGarage {
   constructor(hardware, config) {
     const { name, pin, uid, username, accessoryName, port } = config;
     this.garageDoor = new Service.GarageDoorOpener(name)    
-    this.currentValue = 1;
     this.target = 0;
     this.hardware = hardware;
+    this.hardware.callback = this.doorStateChanged.bind(this);
 
     const doorState = this.garageDoor.getCharacteristic(Characteristic.TargetDoorState);
     doorState.on(CharacteristicEventTypes.SET, this.setTargetState.bind(this));
     doorState.on(CharacteristicEventTypes.GET, this.targetState.bind(this));
-    this.garageDoor.setCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.CLOSED);
     
     const currentState = this.garageDoor.getCharacteristic(Characteristic.CurrentDoorState);
     currentState.on(CharacteristicEventTypes.GET, this.currentState.bind(this));
-    
+    this.garageDoor.setCharacteristic(Characteristic.CurrentDoorState, this.garageCurrentState());
+
     const obstruction = this.garageDoor.getCharacteristic(Characteristic.ObstructionDetected);
     obstruction.on(CharacteristicEventTypes.GET, this.obstruction.bind(this));
     
@@ -40,11 +39,9 @@ class HomeKitGarage {
 
   setTargetState(value, callback) {
     console.log("Setting door target, ", value);
-    this.currentValue = value;
     this.target = value;
-  
     const completion = () => {
-      this.garageDoor.setCharacteristic(Characteristic.CurrentDoorState, value);
+	    console.log("switch toggled", value);
     }
 
     if (value == 0) {
@@ -62,13 +59,23 @@ class HomeKitGarage {
   }
 
   currentState(callback) {
-    console.log("Getting current, ", this.currentValue);
-    callback(null, this.currentValue);
+    const current = this.garageCurrentState();
+    console.log("Getting current, ", current);
+    callback(null, current);
   }
 
   obstruction(callback) {
     console.log("Getting obstruction, ");
     callback(null, 0)
+  }
+
+  doorStateChanged(value) {
+    console.log("Door state changed", value);
+    this.garageDoor.setCharacteristic(Characteristic.CurrentDoorState, this.garageCurrentState());
+  }
+
+  garageCurrentState() {
+    return this.hardware.isClosed() ? Characteristic.CurrentDoorState.CLOSED : Characteristic.CurrentDoorState.OPEN;
   }
 }
 

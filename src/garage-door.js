@@ -2,27 +2,41 @@ const { Gpio } = require("onoff");
 
 class GarageDoor {
     
-    constructor( { pin } ) {
-        this.remote = new Gpio(pin, 'out');
-        this.remote.writeSync(0);
+    constructor( { pin, sensorPin } ) {
+        this.pin = sensorPin;
+	    this.trigger = new Gpio(pin, 'out');
+        this.closeSensor = new Gpio(sensorPin, 'in', 'both');
+        this.closeSensor.watch(this.sensorDidChange.bind(this));
+        this.trigger.writeSync(0);
     }
 
     open(callback) {
-        console.log("opening");
         this.toggleSwitch(callback);
     }
 
     close(callback) {
-        console.log("closing");
+       	if (this.isClosed()) { 
+     		console.log("Skipping close");
+		    return; 
+	    }
         this.toggleSwitch(callback);
     }
 
     toggleSwitch(callback) {
-        this.remote.writeSync(1);
+        this.trigger.writeSync(1);
         setTimeout( _ => {
-            this.remote.writeSync(0);
+            this.trigger.writeSync(0);
             callback();
-        }, 1000)
+        }, 500)
+    }
+
+    sensorDidChange(err, value) {
+        console.log(`sensor ${this.pin} changed: `, value);
+        this.callback(value);
+    }
+
+    isClosed() {
+        return this.closeSensor.readSync() == 0;
     }
 }
 
