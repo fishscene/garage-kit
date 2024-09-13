@@ -1,6 +1,7 @@
 # GarageKit
 
 A node app that runs on a Raspberry Pi that can control garage doors using HomeKit
+Youtube Video: https://www.youtube.com/watch?v=-h3uSNCeCGY
 
 ## Parts
 
